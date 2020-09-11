@@ -35,6 +35,8 @@ extern "C" {
     #include "x16r.h"
     #include "x16rv2.h"
     #include "neoscrypt.h"
+    #include "crypto/argon2/argon2.h"
+    #include "crypto/yescrypt/yescrypt.h"
 }
 
 #include "boolberry.h"
@@ -102,7 +104,77 @@ using namespace v8;
  DECLARE_CALLBACK(x15, x15_hash, 32);
  DECLARE_CALLBACK(x16r, x16r_hash, 32);
  DECLARE_CALLBACK(x16rv2, x16rv2_hash, 32);
+ DECLARE_CALLBACK(yescrypt, yescrypt_hash, 32);
 
+DECLARE_FUNC(argon2d) {
+    if (info.Length() < 4)
+        RETURN_EXCEPT("You must provide buffer to hash, T value, M value, and P value");
+
+    Local<Object> target = Nan::To<Object>(info[0]).ToLocalChecked();
+
+    if(!Buffer::HasInstance(target))
+        RETURN_EXCEPT("Argument should be a buffer object.");
+
+    unsigned int tValue = Nan::To<uint32_t>(info[1]).ToChecked();
+    unsigned int mValue = Nan::To<uint32_t>(info[2]).ToChecked();
+    unsigned int pValue = Nan::To<uint32_t>(info[3]).ToChecked();
+
+    char * input = Buffer::Data(target);
+    char output[32];
+
+    uint32_t input_len = Buffer::Length(target);
+
+    argon2d_hash_raw(tValue, mValue, pValue, input, input_len, input, input_len, output, 32);
+
+    SET_BUFFER_RETURN(output, 32);
+}
+
+DECLARE_FUNC(argon2i) {
+    if (info.Length() < 4)
+        RETURN_EXCEPT("You must provide buffer to hash, T value, M value, and P value");
+
+    Local<Object> target = Nan::To<Object>(info[0]).ToLocalChecked();
+
+    if(!Buffer::HasInstance(target))
+        RETURN_EXCEPT("Argument should be a buffer object.");
+
+    unsigned int tValue = Nan::To<uint32_t>(info[1]).ToChecked();
+    unsigned int mValue = Nan::To<uint32_t>(info[2]).ToChecked();
+    unsigned int pValue = Nan::To<uint32_t>(info[3]).ToChecked();
+
+    char * input = Buffer::Data(target);
+    char output[32];
+
+    uint32_t input_len = Buffer::Length(target);
+
+    argon2i_hash_raw(tValue, mValue, pValue, input, input_len, input, input_len, output, 32);
+
+    SET_BUFFER_RETURN(output, 32);
+}
+
+DECLARE_FUNC(argon2id) {
+
+    if (info.Length() < 4)
+        RETURN_EXCEPT("You must provide buffer to hash, T value, M value, and P value");
+
+    Local<Object> target = Nan::To<Object>(info[0]).ToLocalChecked();
+
+    if(!Buffer::HasInstance(target))
+        RETURN_EXCEPT("Argument should be a buffer object.");
+
+    unsigned int tValue = Nan::To<uint32_t>(info[1]).ToChecked();
+    unsigned int mValue = Nan::To<uint32_t>(info[2]).ToChecked();
+    unsigned int pValue = Nan::To<uint32_t>(info[3]).ToChecked();
+
+    char * input = Buffer::Data(target);
+    char output[32];
+
+    uint32_t input_len = Buffer::Length(target);
+
+    argon2id_hash_raw(tValue, mValue, pValue, input, input_len, input, input_len, output, 32);
+
+    SET_BUFFER_RETURN(output, 32);
+}
 
 DECLARE_FUNC(scrypt) {
    if (info.Length() < 3)
@@ -135,6 +207,8 @@ DECLARE_FUNC(neoscrypt) {
    if(!Buffer::HasInstance(target))
        RETURN_EXCEPT("Argument should be a buffer object.");
 
+   uint32_t profile = Nan::To<uint32_t>(info[1]).ToChecked();
+
    char * input = Buffer::Data(target);
    char output[32];
 
@@ -142,7 +216,7 @@ DECLARE_FUNC(neoscrypt) {
 
    if (input_len < 80)
       RETURN_EXCEPT("Argument must be longer than 80 bytes");
-   neoscrypt(input, output, 0);
+   neoscrypt(input, output, profile);
 
    SET_BUFFER_RETURN(output, 32);
 }
@@ -311,6 +385,9 @@ DECLARE_FUNC(boolberry) {
 }
 
 NAN_MODULE_INIT(init) {
+    NAN_EXPORT(target, argon2d);
+    NAN_EXPORT(target, argon2i);
+    NAN_EXPORT(target, argon2id);
     NAN_EXPORT(target, bcrypt);
     NAN_EXPORT(target, blake);
     NAN_EXPORT(target, boolberry);
@@ -344,6 +421,7 @@ NAN_MODULE_INIT(init) {
     NAN_EXPORT(target, x16r);
     NAN_EXPORT(target, x16rv2);
     NAN_EXPORT(target, neoscrypt);
+    NAN_EXPORT(target, yescrypt);
 }
 
 NODE_MODULE(multihashing, init)
